@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import type { PostFormState } from "@/app/posts/actions";
 import Field from "@/components/Field";
 import FormAlert from "@/components/FormAlert";
 import SubmitButton from "@/components/SubmitButton";
+import ImagePicker from "./ImagePicker";
 
 type Initial = {
   id?: number;
@@ -13,6 +14,7 @@ type Initial = {
   price: string;
   description: string;
   status: string;
+  images: string[];
 };
 
 /**
@@ -24,13 +26,18 @@ export default function PostForm({
   initial,
   submitLabel,
   cancelHref,
+  userId,
 }: {
   action: (prev: PostFormState, formData: FormData) => Promise<PostFormState>;
   initial: Initial;
   submitLabel: string;
   cancelHref: string;
+  userId: string;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
+  // 사진 목록은 아래 <form key=…> 가 다시 만들어져도 사라지지 않도록 폼 바깥(이 컴포넌트)의 상태로 둡니다.
+  const [images, setImages] = useState(initial.images);
+  const [uploading, setUploading] = useState(false);
   // 검사에 실패하면 서버가 돌려준 입력값으로 다시 채워 줍니다.
   const v = { ...initial, ...state.fields };
   const isEdit = initial.id !== undefined;
@@ -39,6 +46,18 @@ export default function PostForm({
     // key 를 바꾸면 폼이 다시 만들어져 defaultValue 가 새 값으로 적용됩니다.
     <form key={JSON.stringify(state.fields ?? {})} action={formAction} className="space-y-5">
       {isEdit && <input type="hidden" name="id" value={initial.id} />}
+
+      <ImagePicker
+        userId={userId}
+        paths={images}
+        savedPaths={initial.images}
+        onChange={setImages}
+        onUploadingChange={setUploading}
+      />
+      {/* 올라간 사진 경로를 같은 이름(images)의 숨은 입력으로 여러 개 보냅니다 → formData.getAll("images") */}
+      {images.map((path) => (
+        <input key={path} type="hidden" name="images" value={path} />
+      ))}
 
       <Field label="제목" name="title" defaultValue={v.title} maxLength={40} required />
       <Field
@@ -86,7 +105,8 @@ export default function PostForm({
       </div>
 
       <FormAlert error={state.error} />
-      <SubmitButton pending={pending}>{submitLabel}</SubmitButton>
+      {/* 사진이 올라가는 중에는 저장하지 못하게 막습니다 */}
+      <SubmitButton pending={pending || uploading}>{submitLabel}</SubmitButton>
       <p className="text-center text-sm">
         <Link href={cancelHref} className="text-muted hover:text-foreground">
           취소

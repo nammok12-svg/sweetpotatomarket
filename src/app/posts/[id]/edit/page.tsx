@@ -37,9 +37,11 @@ async function EditForm({ params }: { params: PageProps<"/posts/[id]/edit">["par
         price: String(post.price),
         description: post.description,
         status: post.status,
+        images: post.image_paths,
       }}
       submitLabel="수정 완료"
       cancelHref={`/posts/${id}`}
+      userId={post.seller_id}
     />
   );
 }

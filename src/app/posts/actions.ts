@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { POST_STATUSES, type PostStatus } from "@/lib/posts";
+import { IMAGE_BUCKET, MAX_IMAGES, isOwnImagePath } from "@/lib/images";
 
 export type PostFormState = {
   error?: string;
@@ -15,19 +16,25 @@ type PostInput = {
   price: number;
   description: string;
   status: PostStatus;
+  image_paths: string[];
 };
 
 /**
  * 폼 입력값 검사. 통과하면 { input }, 아니면 { error } 를 돌려줍니다.
  * DB에도 같은 check 제약이 있지만, 사용자에게 친절한 메시지를 주려고 여기서 먼저 검사합니다.
  */
-function readPostForm(formData: FormData):
+function readPostForm(
+  formData: FormData,
+  userId: string,
+):
   | { input: PostInput; fields: Record<string, string> }
   | { error: string; fields: Record<string, string> } {
   const title = String(formData.get("title") ?? "").trim();
   const priceRaw = String(formData.get("price") ?? "").replaceAll(",", "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const statusRaw = String(formData.get("status") ?? "selling");
+  // 같은 이름(images)으로 여러 개 온 값은 getAll 로 배열로 받습니다. Set 으로 중복 제거.
+  const imagePaths = [...new Set(formData.getAll("images").map(String))];
   const fields = { title, price: priceRaw, description, status: statusRaw };
 
   if (title.length < 2 || title.length > 40) {
@@ -39,11 +46,21 @@ function readPostForm(formData: FormData):
   if (description.length > 2000) {
     return { error: "설명은 2000자 이내로 입력해 주세요.", fields };
   }
+  if (imagePaths.length > MAX_IMAGES) {
+    return { error: `사진은 최대 ${MAX_IMAGES}장까지 올릴 수 있어요.`, fields };
+  }
+  // 내 폴더의 사진만 허용 — 남의 사진 경로를 끼워 넣으면, 내 글을 지울 때 남의 사진까지 지우려 하게 됩니다.
+  if (!imagePaths.every((p) => isOwnImagePath(p, userId))) {
+    return { error: "사진 정보가 올바르지 않습니다. 다시 올려 주세요.", fields };
+  }
   const status = (POST_STATUSES as readonly string[]).includes(statusRaw)
     ? (statusRaw as PostStatus)
     : "selling";
 
-  return { input: { title, price: Number(priceRaw), description, status }, fields };
+  return {
+    input: { title, price: Number(priceRaw), description, status, image_paths: imagePaths },
+    fields,
+  };
 }
 
 /**
@@ -64,7 +81,7 @@ export async function createPost(
   formData: FormData,
 ): Promise<PostFormState> {
   const { supabase, userId } = await requireUserId();
-  const parsed = readPostForm(formData);
+  const parsed = readPostForm(formData, userId);
   if ("error" in parsed) return parsed;
 
   const { data, error } = await supabase
@@ -88,23 +105,36 @@ export async function updatePost(
 ): Promise<PostFormState> {
   const { supabase, userId } = await requireUserId();
   const id = Number(formData.get("id"));
-  const parsed = readPostForm(formData);
+  const parsed = readPostForm(formData, userId);
   if ("error" in parsed) return parsed;
 
-  // RLS 가 "본인 글만 수정"을 막아 주지만, 남의 글이면 에러 대신 0행이 바뀝니다.
-  // 그래서 .select() 로 실제로 바뀐 행이 있는지 확인합니다.
-  const { data, error } = await supabase
+  // 수정 전 사진 목록 — 빠진 사진을 Storage 에서 지우려고 먼저 읽어 둡니다.
+  const { data: before } = await supabase
+    .from("market_posts")
+    .select("image_paths")
+    .eq("id", id)
+    .eq("seller_id", userId)
+    .maybeSingle();
+  if (!before) {
+    return { error: "수정할 수 없는 글입니다. (본인 글이 아니거나 삭제됨)", fields: parsed.fields };
+  }
+
+  const { error } = await supabase
     .from("market_posts")
     .update({ ...parsed.input, updated_at: new Date().toISOString() })
     .eq("id", id)
-    .eq("seller_id", userId)
-    .select("id");
+    .eq("seller_id", userId);
 
   if (error) {
     return { error: `수정에 실패했습니다: ${error.message}`, fields: parsed.fields };
   }
-  if (!data || data.length === 0) {
-    return { error: "수정할 수 없는 글입니다. (본인 글이 아니거나 삭제됨)", fields: parsed.fields };
+
+  // DB 저장이 끝난 뒤에 지웁니다. (반대 순서면 저장 실패 시 사진만 사라질 수 있음)
+  const removed = (before.image_paths as string[]).filter(
+    (p) => !parsed.input.image_paths.includes(p),
+  );
+  if (removed.length > 0) {
+    await supabase.storage.from(IMAGE_BUCKET).remove(removed);
   }
 
   revalidatePath("/");
@@ -112,18 +142,25 @@ export async function updatePost(
   redirect(`/posts/${id}`);
 }
 
-/** D — 판매글 삭제 */
+/** D — 판매글 삭제 (사진 파일도 함께) */
 export async function deletePost(formData: FormData) {
   const { supabase, userId } = await requireUserId();
   const id = Number(formData.get("id"));
 
-  const { error } = await supabase
+  // .select() 를 붙이면 지운 행을 돌려받을 수 있어서, 그 글의 사진 경로를 알 수 있습니다.
+  const { data, error } = await supabase
     .from("market_posts")
     .delete()
     .eq("id", id)
-    .eq("seller_id", userId);
+    .eq("seller_id", userId)
+    .select("image_paths");
 
   if (error) throw new Error(`삭제에 실패했습니다: ${error.message}`);
+
+  const paths = (data ?? []).flatMap((row) => row.image_paths as string[]);
+  if (paths.length > 0) {
+    await supabase.storage.from(IMAGE_BUCKET).remove(paths);
+  }
 
   revalidatePath("/");
   redirect("/");

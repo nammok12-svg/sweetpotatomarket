@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDate, formatPrice, getPosts } from "@/lib/posts";
+import { publicImageUrl } from "@/lib/images";
 import StatusBadge from "@/components/StatusBadge";
 
 export default function Home({ searchParams }: PageProps<"/">) {
@@ -62,9 +64,21 @@ async function PostList() {
         <li key={post.id}>
           <Link
             href={`/posts/${post.id}`}
-            className="flex items-start justify-between gap-4 px-5 py-4 transition hover:bg-accent-soft/50"
+            className="flex items-start gap-4 px-5 py-4 transition hover:bg-accent-soft/50"
           >
-            <div className="min-w-0">
+            {/* 대표 사진(첫 장). 사진이 없으면 고구마색 빈 칸 */}
+            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-accent-soft">
+              {post.image_paths[0] && (
+                <Image
+                  src={publicImageUrl(post.image_paths[0])}
+                  alt=""
+                  fill
+                  sizes="80px"
+                  className="object-cover"
+                />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
               <p className="truncate font-medium">{post.title}</p>
               <p className="mt-1 text-xs text-muted">
                 {post.seller?.region || "동네 미설정"} · {post.seller?.nickname} ·{" "}

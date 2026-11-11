@@ -20,6 +20,8 @@ export type Post = {
   description: string;
   status: PostStatus;
   created_at: string;
+  /** Storage 안의 사진 경로들. 첫 번째가 대표 사진. */
+  image_paths: string[];
   // market_profiles 와 조인해서 함께 가져온 판매자 정보
   seller: { nickname: string; region: string } | null;
 };
@@ -27,7 +29,7 @@ export type Post = {
 // select 문자열 안의 "seller:market_profiles(...)" 는
 // "seller_id 외래키를 따라가서 프로필을 seller 라는 이름으로 붙여 달라"는 뜻입니다.
 const POST_COLUMNS =
-  "id, seller_id, title, price, description, status, created_at, seller:market_profiles(nickname, region)";
+  "id, seller_id, title, price, description, status, created_at, image_paths, seller:market_profiles(nickname, region)";
 
 /**
  * 판매글 목록 (최신순).

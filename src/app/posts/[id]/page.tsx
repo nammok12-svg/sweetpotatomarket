@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDate, formatPrice, getPost, parsePostId, STATUS_LABEL } from "@/lib/posts";
 import StatusBadge from "@/components/StatusBadge";
+import { publicImageUrl } from "@/lib/images";
 import DeleteButton from "./DeleteButton";
+import Gallery from "./Gallery";
 
 export default function PostPage({ params }: PageProps<"/posts/[id]">) {
   return (
@@ -31,6 +33,12 @@ async function PostDetail({ params }: { params: PageProps<"/posts/[id]">["params
 
   return (
     <article className="mt-6 rounded-xl border border-line bg-surface p-6 sm:p-8">
+      {post.image_paths.length > 0 && (
+        <div className="mb-6">
+          <Gallery urls={post.image_paths.map(publicImageUrl)} title={post.title} />
+        </div>
+      )}
+
       {/* 판매자 */}
       <div className="flex items-center justify-between border-b border-line pb-5">
         <div>
