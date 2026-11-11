@@ -25,13 +25,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 | 1 | 회원가입 / 로그인 / 로그아웃 | 완료 |
 | 2 | 판매글 CRUD (사진 제외) | 완료 |
 | 3 | 판매글 사진 업로드 (여러 장) | 완료 |
+| 4 | 판매글 평가 (얼굴 아이콘 5단계) | 완료 |
 
 ## 2. Supabase: 가계부와 같은 프로젝트를 재사용 중 ⚠️
 
 - 프로젝트 ref: `jyhzbsjwxkvunwoladye` — 이전에 만든 **가계부(`simple-ledger`) 앱과 공유**합니다.
 - 가계부 테이블 `public.transactions` 와 그 RLS 정책(anon 읽기/쓰기/삭제)은 **절대 수정·삭제하지 마세요.** 가계부 앱이 로그인 없이 그대로 씁니다.
 - 고구마마켓의 모든 DB 객체에는 **`market_` 접두사**를 붙입니다. (테이블, 함수, 트리거, Storage 버킷 등)
-  - 현재: `market_profiles`, `market_posts`, `market_handle_new_user()`, `market_on_auth_user_created` 트리거, Storage 버킷 `market_post_images`
+  - 현재: `market_profiles`, `market_posts`, `market_ratings`, `market_handle_new_user()`, `market_on_auth_user_created` 트리거, Storage 버킷 `market_post_images`
 - `auth.users` 는 두 앱이 함께 쓰는 공간입니다. Auth 설정(이메일 인증 on/off, Site URL 등)을 바꾸면 가계부에도 영향이 갈 수 있으니 **바꾸기 전에 사용자에게 확인**합니다.
   - 현재 이메일 인증은 **꺼져 있음** → 가입하면 바로 로그인됨.
 - 스키마 변경 순서:
@@ -40,6 +41,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   3. 같은 SQL을 `supabase/migrations/YYYYMMDDHHMMSS_이름.sql` 로 저장하고
   4. 보안 advisor 를 확인합니다.
 - 새 테이블은 항상 **RLS 를 켜고** 정책을 함께 만듭니다.
+- ⚠️ DB 와 배포 사이트가 연결되어 있어서, 마이그레이션은 **적용 즉시 배포 사이트에 반영**됩니다.
+  기존 쿼리를 깨뜨릴 수 있는 변경(예: 두 테이블 사이 외래키 경로가 하나 더 생김 → 조인 모호)은
+  코드 수정을 먼저 배포하거나, 마이그레이션 직후 바로 배포해야 합니다.
 - 테스트로 만든 계정·데이터는 작업이 끝나면 지웁니다.
 
 ## 3. 키와 환경변수

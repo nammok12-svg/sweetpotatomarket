@@ -2,7 +2,15 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { formatDate, formatPrice, getPost, parsePostId, STATUS_LABEL } from "@/lib/posts";
+import {
+  formatDate,
+  formatPrice,
+  getPost,
+  getRatingSummary,
+  parsePostId,
+  STATUS_LABEL,
+} from "@/lib/posts";
+import RatingPicker from "./RatingPicker";
 import StatusBadge from "@/components/StatusBadge";
 import { publicImageUrl } from "@/lib/images";
 import DeleteButton from "./DeleteButton";
@@ -26,7 +34,12 @@ async function PostDetail({ params }: { params: PageProps<"/posts/[id]">["params
   const id = parsePostId((await params).id);
   if (id === null) notFound();
 
-  const [post, user] = await Promise.all([getPost(id), getCurrentUser()]);
+  const user = await getCurrentUser();
+  // 글과 평가 요약은 서로 기다릴 필요가 없어서 동시에 불러옵니다.
+  const [post, ratings] = await Promise.all([
+    getPost(id),
+    getRatingSummary(id, user?.id ?? null),
+  ]);
   if (!post) notFound();
 
   const isOwner = user?.id === post.seller_id;
@@ -60,6 +73,12 @@ async function PostDetail({ params }: { params: PageProps<"/posts/[id]">["params
       <p className="mt-6 leading-relaxed whitespace-pre-wrap">
         {post.description || <span className="text-muted">설명이 없습니다.</span>}
       </p>
+
+      <RatingPicker
+        postId={post.id}
+        summary={ratings}
+        mode={!user ? "login" : isOwner ? "own" : "can"}
+      />
 
       {/* 본인 글일 때만 수정/삭제 버튼 (실제 권한은 서버 액션 + RLS 가 지킵니다) */}
       {isOwner && (

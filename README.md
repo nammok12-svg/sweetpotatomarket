@@ -20,6 +20,7 @@ http://localhost:3000 접속. 환경변수는 `.env.local` (예시: `.env.exampl
 - [x] 1단계: 회원가입 / 로그인 / 로그아웃
 - [x] 2단계: 판매글 CRUD (쓰기·목록·상세·수정·삭제, 사진 제외)
 - [x] 3단계: 판매글 사진 업로드 (여러 장, 최대 10장)
+- [x] 4단계: 판매글 평가 (얼굴 아이콘 5단계)
 - [ ] …
 
 ## 폴더 구조
@@ -31,6 +32,7 @@ src/
 │  ├─ auth.ts                # getCurrentUser() — 현재 로그인 사용자 + 프로필
 │  ├─ posts.ts               # getPosts() / getPost() — 판매글 조회 + 가격·날짜 표시 도우미
 │  ├─ images.ts              # 사진 버킷 이름, 공개 주소 만들기, 경로 검사
+│  ├─ ratings.ts             # 평가 5단계 이름표 (아주 좋아요 ~ 아주 별루예요)
 │  └─ supabase/
 │     ├─ server.ts           # 서버용 Supabase 클라이언트
 │     ├─ client.ts           # 브라우저용 Supabase 클라이언트 (사진 업로드)
@@ -43,13 +45,13 @@ src/
 │  │  ├─ PostForm.tsx        # 글쓰기·수정 공용 폼 (클라이언트 컴포넌트)
 │  │  ├─ ImagePicker.tsx     # 사진 여러 장 고르기 → 줄이기 → Storage 업로드
 │  │  ├─ new/page.tsx        # /posts/new — 판매글 쓰기
-│  │  └─ [id]/               # /posts/1 상세(+사진 Gallery, 삭제 버튼), /posts/1/edit 수정
+│  │  └─ [id]/               # /posts/1 상세(+사진 Gallery, 얼굴 평가 RatingPicker, 삭제 버튼), /posts/1/edit 수정
 │  ├─ login/                 # 로그인 페이지 + 폼(클라이언트 컴포넌트)
 │  ├─ signup/                # 회원가입 페이지 + 폼
 │  └─ auth/
 │     ├─ actions.ts          # 서버 액션: signup / login / logout
 │     └─ callback/route.ts   # 이메일 인증 링크가 돌아오는 곳
-└─ components/               # Header, Logo, Field, SubmitButton 등
+└─ components/               # Header, Logo, Field, SubmitButton, FaceIcon(평가 얼굴 SVG) 등
 supabase/migrations/         # DB에 적용한 SQL 기록
 ```
 
@@ -59,6 +61,9 @@ supabase/migrations/         # DB에 적용한 SQL 기록
 - 고구마마켓 테이블은 모두 **`market_` 접두사** 를 붙입니다.
   - `market_profiles` — 회원 닉네임·동네 (auth.users 와 1:1)
   - `market_posts` — 판매글 (제목·가격·설명·상태·사진 경로 `image_paths`). 읽기는 누구나, 쓰기·수정·삭제는 본인만 (RLS)
+  - `market_ratings` — 판매글 평가 (점수 1~5). 한 사람당 한 글에 하나, 내 글은 평가 불가 (RLS)
+    - 이 테이블도 글↔프로필을 이어 주므로, 글에서 판매자 프로필을 불러올 때는
+      `market_profiles!market_posts_seller_id_fkey(...)` 처럼 **외래키 이름을 꼭 적어야** 합니다.
   - Storage 버킷 `market_post_images` — 판매글 사진. 공개 읽기, 업로드·삭제는 `{내 user id}/` 폴더에만
 - 회원가입 시 DB 트리거(`market_on_auth_user_created`)가 프로필을 자동 생성합니다.
 

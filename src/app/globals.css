@@ -12,6 +12,10 @@
   --accent-soft: #f5edf0;
   --danger: #a3341f;
   --success: #2f6b4f;
+  /* 평가 얼굴 아이콘용 — 따뜻한 노랑, 화난 얼굴의 붉은 기, 볼 터치 */
+  --face: #f5cd72;
+  --face-angry: #ee9a6c;
+  --blush: #ef8f7f;
 }
 
 @theme inline {
@@ -25,6 +29,9 @@
   --color-accent-soft: var(--accent-soft);
   --color-danger: var(--danger);
   --color-success: var(--success);
+  --color-face: var(--face);
+  --color-face-angry: var(--face-angry);
+  --color-blush: var(--blush);
   --font-sans: var(--font-noto-sans), system-ui, sans-serif;
   --font-serif: var(--font-noto-serif), Georgia, serif;
 }

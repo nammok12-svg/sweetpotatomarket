@@ -142,6 +142,46 @@ export async function updatePost(
   redirect(`/posts/${id}`);
 }
 
+/**
+ * 평가하기 — 얼굴 버튼을 누르면 호출됩니다.
+ * - 처음 누르면 평가 저장, 다른 얼굴을 누르면 바꾸기, 같은 얼굴을 다시 누르면 취소.
+ * - 내 글 평가 금지는 RLS 정책이 DB에서 막습니다.
+ */
+export async function ratePost(formData: FormData) {
+  const { supabase, userId } = await requireUserId();
+  const postId = Number(formData.get("postId"));
+  const score = Number(formData.get("score"));
+  if (!Number.isInteger(postId) || !Number.isInteger(score) || score < 1 || score > 5) {
+    throw new Error("평가 값이 올바르지 않습니다.");
+  }
+
+  const { data: existing } = await supabase
+    .from("market_ratings")
+    .select("score")
+    .eq("post_id", postId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const { error } =
+    existing?.score === score
+      ? // 같은 얼굴을 다시 누름 → 평가 취소
+        await supabase
+          .from("market_ratings")
+          .delete()
+          .eq("post_id", postId)
+          .eq("user_id", userId)
+      : // upsert = 없으면 insert, (post_id, user_id) 가 이미 있으면 update
+        await supabase.from("market_ratings").upsert(
+          { post_id: postId, user_id: userId, score, updated_at: new Date().toISOString() },
+          { onConflict: "post_id,user_id" },
+        );
+
+  if (error) throw new Error(`평가에 실패했습니다: ${error.message}`);
+
+  // 상세 페이지를 다시 그려서 바뀐 인원 수를 보여 줍니다.
+  revalidatePath(`/posts/${postId}`);
+}
+
 /** D — 판매글 삭제 (사진 파일도 함께) */
 export async function deletePost(formData: FormData) {
   const { supabase, userId } = await requireUserId();
