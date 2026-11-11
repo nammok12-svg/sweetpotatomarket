@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+/* 고구마마켓 디자인 토큰 — 차분한 아이보리 바탕 + 깊은 고구마색 포인트 */
+:root {
+  --background: #faf8f5;
+  --surface: #ffffff;
+  --foreground: #1f1b1a;
+  --muted: #6f6763;
+  --line: #e7e1da;
+  --accent: #7a2e4d;
+  --accent-strong: #5e2139;
+  --accent-soft: #f5edf0;
+  --danger: #a3341f;
+  --success: #2f6b4f;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --font-sans: var(--font-noto-sans), system-ui, sans-serif;
+  --font-serif: var(--font-noto-serif), Georgia, serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
