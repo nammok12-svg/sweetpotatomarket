@@ -28,6 +28,12 @@ async function UserNav() {
           <span className="mr-2 hidden text-muted sm:inline">
             <strong className="font-medium text-foreground">{user.nickname}</strong>님
           </span>
+          <Link
+            href="/posts/new"
+            className="rounded-md px-3 py-2 text-muted transition hover:bg-accent-soft hover:text-accent-strong"
+          >
+            판매하기
+          </Link>
           <form action={logout}>
             <button
               type="submit"

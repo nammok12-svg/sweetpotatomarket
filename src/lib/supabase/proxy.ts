@@ -45,5 +45,15 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // 글쓰기·수정 페이지는 로그인이 필요합니다. 로그인 후 원래 페이지로 돌아오도록 next 를 붙입니다.
+  // (화면 이동용 1차 확인일 뿐, 실제 권한 확인은 서버 액션과 RLS 가 합니다)
+  const needsLogin = path === "/posts/new" || /^\/posts\/[^/]+\/edit$/.test(path);
+  if (!isLoggedIn && needsLogin) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = `?next=${encodeURIComponent(path)}`;
+    return NextResponse.redirect(url);
+  }
+
   return response;
 }

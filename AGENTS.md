@@ -23,15 +23,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 | 단계 | 내용 | 상태 |
 |---|---|---|
 | 1 | 회원가입 / 로그인 / 로그아웃 | 완료 |
-| 2 | 상품 등록 · 목록 | 예정 |
-| 3 | 상품 상세 · 이미지 업로드 | 예정 |
+| 2 | 판매글 CRUD (사진 제외) | 완료 |
+| 3 | 판매글 사진 업로드 | 예정 |
 
 ## 2. Supabase: 가계부와 같은 프로젝트를 재사용 중 ⚠️
 
 - 프로젝트 ref: `jyhzbsjwxkvunwoladye` — 이전에 만든 **가계부(`simple-ledger`) 앱과 공유**합니다.
 - 가계부 테이블 `public.transactions` 와 그 RLS 정책(anon 읽기/쓰기/삭제)은 **절대 수정·삭제하지 마세요.** 가계부 앱이 로그인 없이 그대로 씁니다.
 - 고구마마켓의 모든 DB 객체에는 **`market_` 접두사**를 붙입니다. (테이블, 함수, 트리거, Storage 버킷 등)
-  - 현재: `market_profiles`, `market_handle_new_user()`, `market_on_auth_user_created` 트리거
+  - 현재: `market_profiles`, `market_posts`, `market_handle_new_user()`, `market_on_auth_user_created` 트리거
 - `auth.users` 는 두 앱이 함께 쓰는 공간입니다. Auth 설정(이메일 인증 on/off, Site URL 등)을 바꾸면 가계부에도 영향이 갈 수 있으니 **바꾸기 전에 사용자에게 확인**합니다.
   - 현재 이메일 인증은 **꺼져 있음** → 가입하면 바로 로그인됨.
 - 스키마 변경 순서:

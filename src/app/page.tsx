@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { formatDate, formatPrice, getPosts } from "@/lib/posts";
+import StatusBadge from "@/components/StatusBadge";
 
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
@@ -24,10 +26,57 @@ export default function Home({ searchParams }: PageProps<"/">) {
         ))}
       </section>
 
-      <p className="py-16 text-center text-sm text-muted">
-        상품 목록은 다음 단계에서 준비 중입니다.
-      </p>
+      {/* 판매글 목록 — DB 조회는 요청 시점에 하므로 Suspense 안에 둡니다 */}
+      <section className="py-14">
+        <div className="mb-6 flex items-end justify-between">
+          <h2 className="font-serif text-2xl font-bold tracking-tight">최근 판매글</h2>
+          <Link
+            href="/posts/new"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-strong"
+          >
+            판매글 쓰기
+          </Link>
+        </div>
+        <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-line/40" />}>
+          <PostList />
+        </Suspense>
+      </section>
     </div>
+  );
+}
+
+async function PostList() {
+  const posts = await getPosts();
+
+  if (posts.length === 0) {
+    return (
+      <p className="rounded-xl border border-dashed border-line py-16 text-center text-sm text-muted">
+        아직 판매글이 없습니다. 첫 번째 물건을 올려 보세요.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
+      {posts.map((post) => (
+        <li key={post.id}>
+          <Link
+            href={`/posts/${post.id}`}
+            className="flex items-start justify-between gap-4 px-5 py-4 transition hover:bg-accent-soft/50"
+          >
+            <div className="min-w-0">
+              <p className="truncate font-medium">{post.title}</p>
+              <p className="mt-1 text-xs text-muted">
+                {post.seller?.region || "동네 미설정"} · {post.seller?.nickname} ·{" "}
+                {formatDate(post.created_at)}
+              </p>
+              <p className="mt-1.5 font-bold">{formatPrice(post.price)}</p>
+            </div>
+            <StatusBadge status={post.status} />
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
 

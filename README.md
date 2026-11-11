@@ -18,8 +18,8 @@ http://localhost:3000 접속. 환경변수는 `.env.local` (예시: `.env.exampl
 ## 진행 단계
 
 - [x] 1단계: 회원가입 / 로그인 / 로그아웃
-- [ ] 2단계: 상품 등록·목록
-- [ ] 3단계: 상품 상세·이미지 업로드
+- [x] 2단계: 판매글 CRUD (쓰기·목록·상세·수정·삭제, 사진 제외)
+- [ ] 3단계: 판매글 사진 업로드
 - [ ] …
 
 ## 폴더 구조
@@ -29,12 +29,18 @@ src/
 ├─ proxy.ts                  # 모든 요청 전에 로그인 세션(토큰) 갱신 (구 middleware)
 ├─ lib/
 │  ├─ auth.ts                # getCurrentUser() — 현재 로그인 사용자 + 프로필
+│  ├─ posts.ts               # getPosts() / getPost() — 판매글 조회 + 가격·날짜 표시 도우미
 │  └─ supabase/
 │     ├─ server.ts           # 서버용 Supabase 클라이언트
 │     └─ proxy.ts            # proxy.ts 에서 쓰는 세션 갱신 로직
 ├─ app/
 │  ├─ layout.tsx             # 공통 레이아웃 (헤더/푸터, 폰트)
-│  ├─ page.tsx               # 홈
+│  ├─ page.tsx               # 홈 (최근 판매글 목록)
+│  ├─ posts/
+│  │  ├─ actions.ts          # 서버 액션: createPost / updatePost / deletePost
+│  │  ├─ PostForm.tsx        # 글쓰기·수정 공용 폼 (클라이언트 컴포넌트)
+│  │  ├─ new/page.tsx        # /posts/new — 판매글 쓰기
+│  │  └─ [id]/               # /posts/1 상세(+삭제 버튼), /posts/1/edit 수정
 │  ├─ login/                 # 로그인 페이지 + 폼(클라이언트 컴포넌트)
 │  ├─ signup/                # 회원가입 페이지 + 폼
 │  └─ auth/
@@ -49,6 +55,7 @@ supabase/migrations/         # DB에 적용한 SQL 기록
 - 가계부 테이블: `transactions`
 - 고구마마켓 테이블은 모두 **`market_` 접두사** 를 붙입니다.
   - `market_profiles` — 회원 닉네임·동네 (auth.users 와 1:1)
+  - `market_posts` — 판매글 (제목·가격·설명·상태). 읽기는 누구나, 쓰기·수정·삭제는 본인만 (RLS)
 - 회원가입 시 DB 트리거(`market_on_auth_user_created`)가 프로필을 자동 생성합니다.
 
 ## 공부 포인트
@@ -58,6 +65,8 @@ supabase/migrations/         # DB에 적용한 SQL 기록
 3. **getClaims()** — 서버에서는 `getSession()` 대신 토큰을 검증하는 `getClaims()` 를 씁니다.
 4. **RLS** — `market_profiles` 는 누구나 읽기 가능, 수정은 본인만.
 5. **Cache Components** — 로그인 상태처럼 요청마다 다른 부분은 `<Suspense>` 안에 둡니다.
+6. **CRUD 권한은 세 겹** — 화면(본인 글에만 수정/삭제 버튼) → 서버 액션(로그인·작성자 확인) → RLS(DB가 최종 차단).
+   화면만 막으면 직접 POST 요청으로 뚫릴 수 있어서 서버와 DB에서도 확인합니다.
 
 ## 배포 시 체크 (나중에)
 
