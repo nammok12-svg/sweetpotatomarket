@@ -178,8 +178,9 @@ export async function ratePost(formData: FormData) {
 
   if (error) throw new Error(`평가에 실패했습니다: ${error.message}`);
 
-  // 상세 페이지를 다시 그려서 바뀐 인원 수를 보여 줍니다.
+  // 상세 페이지와 목록(평가 요약)을 다시 그려서 바뀐 결과를 보여 줍니다.
   revalidatePath(`/posts/${postId}`);
+  revalidatePath("/");
 }
 
 /** D — 판매글 삭제 (사진 파일도 함께) */

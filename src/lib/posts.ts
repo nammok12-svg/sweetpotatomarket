@@ -1,7 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { RatingScore, RatingSummary } from "@/lib/ratings";
+import { summarizeScores, type RatingScore, type RatingSummary } from "@/lib/ratings";
 
 /** 판매 상태 — DB의 check 제약과 같은 값만 씁니다. */
 export const POST_STATUSES = ["selling", "reserved", "sold"] as const;
@@ -34,22 +34,34 @@ export type Post = {
 const POST_COLUMNS =
   "id, seller_id, title, price, description, status, created_at, image_paths, seller:market_profiles!market_posts_seller_id_fkey(nickname, region)";
 
+/** 목록용: 판매글 + 평가 한 줄 요약 */
+export type PostWithRating = Post & {
+  rating: { face: RatingScore; count: number } | null;
+};
+
 /**
- * 판매글 목록 (최신순).
+ * 판매글 목록 (최신순) + 글마다 평가 요약.
  * 쿠키를 읽는 Supabase 클라이언트를 쓰므로 <Suspense> 안에서 불러야 합니다.
  */
-export async function getPosts(): Promise<Post[]> {
+export async function getPosts(): Promise<PostWithRating[]> {
   // auth.ts 의 getCurrentUser() 와 같은 이유: Supabase 가 토큰 만료를 검사하며
   // 현재 시각을 쓰므로, "요청 시점에 실행"한다고 먼저 알려 줍니다.
   await connection();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("market_posts")
-    .select(POST_COLUMNS)
+    // market_ratings(score): 글마다 달린 평가들의 점수만 함께 가져옵니다 (post_id 외래키를 따라감)
+    .select(`${POST_COLUMNS}, market_ratings(score)`)
     .order("created_at", { ascending: false })
     .limit(50);
   if (error) throw new Error(`판매글을 불러오지 못했습니다: ${error.message}`);
-  return (data ?? []) as unknown as Post[];
+
+  const rows = (data ?? []) as unknown as (Post & { market_ratings: { score: number }[] })[];
+  // 점수 목록 → { 대표 얼굴, 인원 } 으로 바꾸고, 원래 점수 배열은 빼고 돌려줍니다.
+  return rows.map(({ market_ratings, ...post }) => ({
+    ...post,
+    rating: summarizeScores(market_ratings.map((r) => r.score)),
+  }));
 }
 
 /** 판매글 하나. 없으면 null. */

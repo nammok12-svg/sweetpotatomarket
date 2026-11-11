@@ -11,6 +11,21 @@ export const RATING_OPTIONS: { score: RatingScore; label: string }[] = [
   { score: 1, label: "아주 별루예요" },
 ];
 
+/** 점수 → 이름표. 예: 4 → "좋아요" */
+export function ratingLabel(score: RatingScore) {
+  return RATING_OPTIONS.find((o) => o.score === score)!.label;
+}
+
+/**
+ * 목록용 한 줄 요약: 평균 점수를 반올림해서 "대표 얼굴" 하나로 보여 줍니다.
+ * 평가가 없으면 null.
+ */
+export function summarizeScores(scores: number[]): { face: RatingScore; count: number } | null {
+  if (scores.length === 0) return null;
+  const average = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+  return { face: Math.round(average) as RatingScore, count: scores.length };
+}
+
 export type RatingSummary = {
   /** 점수별 인원. 예: { 5: 3, 4: 1, 3: 0, 2: 0, 1: 0 } */
   counts: Record<RatingScore, number>;

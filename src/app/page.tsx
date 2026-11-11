@@ -4,7 +4,9 @@ import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDate, formatPrice, getPosts } from "@/lib/posts";
 import { publicImageUrl } from "@/lib/images";
+import { ratingLabel } from "@/lib/ratings";
 import StatusBadge from "@/components/StatusBadge";
+import FaceIcon from "@/components/FaceIcon";
 
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
@@ -84,7 +86,19 @@ async function PostList() {
                 {post.seller?.region || "동네 미설정"} · {post.seller?.nickname} ·{" "}
                 {formatDate(post.created_at)}
               </p>
-              <p className="mt-1.5 font-bold">{formatPrice(post.price)}</p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <p className="font-bold">{formatPrice(post.price)}</p>
+                {/* 평가가 있을 때만: 평균에 가장 가까운 얼굴 + 이름표 + 인원 */}
+                {post.rating && (
+                  <span className="flex items-center gap-1 text-xs text-muted">
+                    <FaceIcon score={post.rating.face} className="h-4.5 w-4.5" />
+                    <span className="font-medium text-foreground">
+                      {ratingLabel(post.rating.face)}
+                    </span>
+                    · {post.rating.count}명
+                  </span>
+                )}
+              </div>
             </div>
             <StatusBadge status={post.status} />
           </Link>
